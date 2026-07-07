@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Jeopardy</title>
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <style>
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 2000;
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.3rem;
+        }
+        .load-error {
+            max-width: 500px;
+            text-align: center;
+            background: rgba(0,0,0,0.3);
+            padding: 20px 30px;
+            border-radius: 15px;
+            border: 2px solid #ff3366;
+        }
+        .footer-link {
+            text-align: center;
+            margin-top: 10px;
+            opacity: 0.45;
+            font-size: 0.8rem;
+        }
+        .footer-link a {
+            color: white;
+        }
+        :root {
+            --primary: #0066ff;
+            --secondary: #ff3366;
+            --gold: #ffd700;
+            --dark: #0a0e27;
+            --light: #f0f4ff;
+            --shadow: rgba(0, 0, 0, 0.3);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            min-height: 100vh;
+        }
+        
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: slideDown 0.8s ease;
+        }
+        
+        h1 {
+            font-family: 'Righteous', cursive;
+            font-size: 4rem;
+            color: var(--gold);
+            text-shadow: 4px 4px 0 var(--dark), 
+                         8px 8px 0 rgba(0, 0, 0, 0.2);
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+        
+        .scores {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 30px;
+            animation: slideUp 0.8s ease 0.2s both;
+        }
+        
+        .team {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px 40px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+            min-width: 400px;
+        }
+        
+        .team:hover {
+            transform: translateY(-5px);
+        }
+        
+        .team.team1 {
+            border-color: var(--primary);
+        }
+        
+        .team.team2 {
+            border-color: var(--secondary);
+        }
+        
+        .team.team2 .team-name,
+        .team.team2 .score {
+            text-align: right;
+        }
+        
+        .team-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .team1 .team-name {
+            color: var(--primary);
+        }
+        
+        .team2 .team-name {
+            color: var(--secondary);
+        }
+        
+        .score {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--gold);
+            text-shadow: 2px 2px 0 var(--dark);
+            margin-bottom: 15px;
+        }
+        
+        .student-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.9);
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .student-input::placeholder {
+            color: #999;
+        }
+        
+        .random-picker-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .random-btn {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .selected-student {
+            font-size: 1.2rem;
+            color: var(--gold);
+            font-weight: 600;
+            min-height: 30px;
+            text-align: center;
+            padding: 5px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        
+        .judges-section {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px 40px;
+            border: 3px solid var(--gold);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .judges-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gold);
+            margin-bottom: 10px;
+        }
+        
+        .judges-list {
+            font-size: 1.2rem;
+            color: white;
+            min-height: 30px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 600;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-primary {
+            background: var(--gold);
+            color: var(--dark);
+        }
+        
+        .btn-primary:hover {
+            background: #ffed4e;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .board {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+            animation: fadeIn 1s ease 0.4s both;
+        }
+        
+        .category {
+            background: var(--dark);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.8rem;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border: 3px solid var(--gold);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.2;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+        }
+        
+        .cell {
+            background: linear-gradient(135deg, var(--primary) 0%, #0052cc 100%);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--gold);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cell::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+        
+        .cell:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .cell:hover {
+            transform: scale(1.05);
+            border-color: var(--gold);
+            box-shadow: 0 12px 30px rgba(255, 215, 0, 0.4);
+        }
+        
+        .cell.used {
+            background: rgba(0, 0, 0, 0.3);
+            cursor: not-allowed;
+            color: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .cell.used:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 95vw;
+            width: 95vw;
+            max-height: 95vh;
+            border: 5px solid var(--gold);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: zoomIn 0.4s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-header {
+            display: none;
+        }
+        
+        .modal-prompt {
+            font-size: 4rem;
+            line-height: 1.4;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 50px;
+            border-radius: 15px;
+            border-left: 5px solid var(--gold);
+            flex: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .modal-directions {
+            font-size: 1.5rem;
+            line-height: 1.4;
+            color: var(--light);
+            margin-bottom: 15px;
+            font-style: italic;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 10px;
+        }
+        
+        .settings-modal .modal-content {
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .category-selector {
+            margin-bottom: 30px;
+        }
+        
+        .category-option {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .category-option:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .category-option input[type="checkbox"] {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+        
+        .category-option label {
+            cursor: pointer;
+            font-size: 1.2rem;
+            flex: 1;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        @keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        
+        @media (max-width: 1200px) {
+            h1 {
+                font-size: 3rem;
+            }
+            
+            .board {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+            
+            .cell {
+                font-size: 2rem;
+                padding: 20px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .scores {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .team {
+                min-width: auto;
+                padding: 15px 20px;
+            }
+            
+            .board {
+                gap: 10px;
+            }
+            
+            .cell {
+                font-size: 1.5rem;
+                padding: 15px;
+            }
+            
+            .category {
+                font-size: 1.2rem;
+            }
+            
+            .modal-content {
+                padding: 20px;
+            }
+            
+            .modal-prompt {
+                font-size: 2rem;
+                padding: 25px;
+            }
+            
+            .modal-directions {
+                font-size: 1.5rem;
+                padding: 20px;
+            }
+            
+            .modal-header {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important; min-height: 100vh;">
+    <script>
+        // Force background immediately
+        document.documentElement.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        document.body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    </script>
+    <div class="loading-screen" id="loadingScreen">
+        <div>Loading categories…</div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>DELIVERY JEOPARDY!</h1>
+        </header>
+        
+        <div class="scores">
+            <div class="team team1">
+                <div class="team-name">Team 1</div>
+                <div class="score" id="score1">$0</div>
+                <textarea class="student-input" id="team1Students" placeholder="Enter student names, one per line"></textarea>
+                <div class="random-picker-section">
+                    <button class="btn-secondary random-btn" onclick="pickRandomStudent(1)">Pick Random Student</button>
+                    <div class="selected-student" id="selectedStudent1"></div>
+                </div>
+            </div>
+            <div class="team team2">
+                <div class="team-name">Team 2</div>
+                <div class="score" id="score2">$0</div>
+                <textarea class="student-input" id="team2Students" placeholder="Enter student names, one per line"></textarea>
+                <div class="random-picker-section">
+                    <button class="btn-secondary random-btn" onclick="pickRandomStudent(2)">Pick Random Student</button>
+                    <div class="selected-student" id="selectedStudent2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="judges-section">
+            <div class="judges-title">Judges</div>
+            <div class="judges-list" id="judgesList"></div>
+            <button class="btn-primary" onclick="selectJudges()">Select 2 Judges (1 from each team)</button>
+        </div>
+        
+        <div class="controls">
+            <button class="btn-primary" onclick="resetGame()">Reset Game</button>
+            <button class="btn-secondary" onclick="openSettings()">Change Categories</button>
+        </div>
+        
+        <div class="board" id="board"></div>
+
+        <div class="footer-link"><a href="admin.html" target="_blank">Manage categories &amp; prompts</a></div>
+    </div>
+    
+    <div class="modal" id="promptModal">
+        <div class="modal-content">
+            <div class="modal-header" id="modalTitle"></div>
+            <div class="modal-prompt" id="modalPrompt"></div>
+            <div class="modal-directions" id="modalDirections"></div>
+            <div class="modal-buttons">
+                <button class="btn-primary" onclick="awardPoints(1)">Points for Team 1</button>
+                <button class="btn-primary" onclick="awardPoints(2)">Points for Team 2</button>
+                <button class="btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal settings-modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">Select Categories (Choose 5)</div>
+            <div class="category-selector" id="categorySelector"></div>
+            <div class="modal-buttons">
+                <button class="btn-primary" onclick="applyCategories()">Apply</button>
+                <button class="btn-secondary" onclick="closeSettings()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ---- Supabase config ----
+        // The "publishable" key below is safe to expose in client-side code —
+        // it's the public/anon key, and write access is locked down by Row
+        // Level Security policies on the Supabase project (see schema.sql).
+        const SUPABASE_URL = 'https://kkjqqyupcuapuwhznxnh.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_LNasopEjo_0UY-7872aePQ_ALI4mx-o';
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const CACHE_KEY = 'categoriesCache_v1';
+
+        // Populated by loadCategoriesFromSupabase() before the game renders.
+        let allCategories = {};
+
+        // Fetches categories + prompts from Supabase (2 queries, once per page load).
+        // Falls back to the last successfully loaded copy (in localStorage) if the
+        // network request fails, so the game still works if Supabase is unreachable.
+        async function loadCategoriesFromSupabase() {
+            try {
+                const { data: categories, error: catErr } = await sb
+                    .from('categories')
+                    .select('id, name')
+                    .order('sort_order', { ascending: true });
+                if (catErr) throw catErr;
+
+                const { data: prompts, error: promptErr } = await sb
+                    .from('prompts')
+                    .select('category_id, position, prompt, directions');
+                if (promptErr) throw promptErr;
+
+                const built = {};
+                const nameById = {};
+                categories.forEach(c => {
+                    nameById[c.id] = c.name;
+                    built[c.name] = Array.from({ length: 10 }, () => ({ prompt: '', directions: '' }));
+                });
+                prompts.forEach(p => {
+                    const name = nameById[p.category_id];
+                    if (name && p.position >= 0 && p.position <= 9) {
+                        built[name][p.position] = {
+                            prompt: p.prompt || '',
+                            directions: p.directions || ''
+                        };
+                    }
+                });
+
+                if (Object.keys(built).length === 0) {
+                    throw new Error('No categories found in Supabase yet — has schema.sql / seed_data.sql been run?');
+                }
+
+                allCategories = built;
+                localStorage.setItem(CACHE_KEY, JSON.stringify(built));
+                return true;
+            } catch (err) {
+                console.error('Failed to load from Supabase, trying cache:', err);
+                const cached = localStorage.getItem(CACHE_KEY);
+                if (cached) {
+                    allCategories = JSON.parse(cached);
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        let gameState = {
+            team1Score: 0,
+            team2Score: 0,
+            usedCells: new Set(),
+            currentCell: null,
+            selectedCategories: [],
+            version: "2.0", // Version to track data structure changes
+            team1Students: [],
+            team2Students: [],
+            judges: []
+        };
+        
+        const moneyValues = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+        
+        // Get student lists from textareas
+        function getStudentList(teamNumber) {
+            const textarea = document.getElementById(`team${teamNumber}Students`);
+            return textarea.value.split('\n')
+                .map(name => name.trim())
+                .filter(name => name.length > 0);
+        }
+        
+        // Pick a random student (without removing from list)
+        function pickRandomStudent(teamNumber) {
+            const students = getStudentList(teamNumber);
+            
+            if (students.length === 0) {
+                document.getElementById(`selectedStudent${teamNumber}`).textContent = 'No students entered';
+                return;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * students.length);
+            const selectedStudent = students[randomIndex];
+            document.getElementById(`selectedStudent${teamNumber}`).textContent = selectedStudent;
+        }
+        
+        // Select judges (one from each team, removing them from the lists)
+        function selectJudges() {
+            const team1Students = getStudentList(1);
+            const team2Students = getStudentList(2);
+            
+            if (team1Students.length === 0 || team2Students.length === 0) {
+                alert('Please enter students for both teams before selecting judges.');
+                return;
+            }
+            
+            // Pick random students
+            const judge1Index = Math.floor(Math.random() * team1Students.length);
+            const judge2Index = Math.floor(Math.random() * team2Students.length);
+            
+            const judge1 = team1Students[judge1Index];
+            const judge2 = team2Students[judge2Index];
+            
+            // Remove judges from the student lists
+            team1Students.splice(judge1Index, 1);
+            team2Students.splice(judge2Index, 1);
+            
+            // Update textareas with judges removed
+            document.getElementById('team1Students').value = team1Students.join('\n');
+            document.getElementById('team2Students').value = team2Students.join('\n');
+            
+            // Add to judges list
+            gameState.judges.push(judge1, judge2);
+            updateJudgesList();
+            
+            // Clear selected students
+            document.getElementById('selectedStudent1').textContent = '';
+            document.getElementById('selectedStudent2').textContent = '';
+        }
+        
+        // Update the judges display
+        function updateJudgesList() {
+            const judgesList = document.getElementById('judgesList');
+            if (gameState.judges.length === 0) {
+                judgesList.textContent = 'No judges selected yet';
+            } else {
+                judgesList.textContent = gameState.judges.join(', ');
+            }
+        }
+        
+        // Initialize with first 5 categories (columns B-F from the sheet)
+        function initializeDefaultCategories() {
+            gameState.selectedCategories = ["MOVIES & TV", "INSPIRATIONAL", "APOLOGIES", "CONGRESS VIBES", "TOASTS"];
+            localStorage.setItem('selectedCategories', JSON.stringify(gameState.selectedCategories));
+            localStorage.setItem('gameVersion', '2.0');
+        }
+        
+        // Load saved categories or use defaults
+        function loadCategories() {
+            const savedVersion = localStorage.getItem('gameVersion');
+            const saved = localStorage.getItem('selectedCategories');
+            
+            // If version mismatch or no saved data, reset to defaults
+            if (savedVersion !== '2.0' || !saved) {
+                console.log('Initializing with default categories');
+                initializeDefaultCategories();
+                return;
+            }
+            
+            try {
+                const parsed = JSON.parse(saved);
+                // Validate that all categories exist in our data
+                const allValid = parsed.every(cat => allCategories.hasOwnProperty(cat));
+                if (allValid && parsed.length === 5) {
+                    gameState.selectedCategories = parsed;
+                } else {
+                    console.log('Invalid categories found, resetting to defaults');
+                    initializeDefaultCategories();
+                }
+            } catch (e) {
+                console.log('Error parsing saved categories, resetting to defaults');
+                initializeDefaultCategories();
+            }
+        }
+        
+        function renderBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            
+            // Add category headers
+            gameState.selectedCategories.forEach(category => {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'category';
+                categoryDiv.textContent = category;
+                board.appendChild(categoryDiv);
+            });
+            
+            // Add cells for each value
+            for (let i = 0; i < 10; i++) {
+                gameState.selectedCategories.forEach((category, catIndex) => {
+                    const cell = document.createElement('div');
+                    const cellId = `${catIndex}-${i}`;
+                    cell.className = 'cell';
+                    cell.id = cellId;
+                    cell.textContent = `$${moneyValues[i]}`;
+                    
+                    if (gameState.usedCells.has(cellId)) {
+                        cell.classList.add('used');
+                    } else {
+                        cell.onclick = () => openPrompt(catIndex, i, cellId);
+                    }
+                    
+                    board.appendChild(cell);
+                });
+            }
+        }
+        
+        function openPrompt(categoryIndex, promptIndex, cellId) {
+            const category = gameState.selectedCategories[categoryIndex];
+            const promptData = allCategories[category][promptIndex];
+            
+            // Skip empty cells
+            if (!promptData.prompt && !promptData.directions) {
+                return;
+            }
+            
+            gameState.currentCell = {
+                id: cellId,
+                value: moneyValues[promptIndex]
+            };
+            
+            document.getElementById('modalTitle').textContent = `${category} - $${moneyValues[promptIndex]}`;
+            
+            // For categories with separate prompt and directions
+            if (promptData.prompt) {
+                document.getElementById('modalPrompt').textContent = promptData.prompt;
+                document.getElementById('modalDirections').textContent = promptData.directions;
+                document.getElementById('modalDirections').style.display = 'block';
+            } else {
+                // For categories where everything is in directions
+                document.getElementById('modalPrompt').textContent = promptData.directions;
+                document.getElementById('modalDirections').style.display = 'none';
+            }
+            
+            document.getElementById('promptModal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('promptModal').style.display = 'none';
+            if (gameState.currentCell) {
+                gameState.usedCells.add(gameState.currentCell.id);
+                document.getElementById(gameState.currentCell.id).classList.add('used');
+                gameState.currentCell = null;
+                saveGameState();
+            }
+        }
+        
+        function awardPoints(team) {
+            if (!gameState.currentCell) return;
+            
+            if (team === 1) {
+                gameState.team1Score += gameState.currentCell.value;
+                document.getElementById('score1').textContent = `$${gameState.team1Score}`;
+            } else {
+                gameState.team2Score += gameState.currentCell.value;
+                document.getElementById('score2').textContent = `$${gameState.team2Score}`;
+            }
+            
+            closeModal();
+        }
+        
+        function resetGame() {
+            if (confirm('Are you sure you want to reset the game? All scores will be lost.')) {
+                gameState.team1Score = 0;
+                gameState.team2Score = 0;
+                gameState.usedCells.clear();
+                gameState.currentCell = null;
+                
+                document.getElementById('score1').textContent = '$0';
+                document.getElementById('score2').textContent = '$0';
+                
+                saveGameState();
+                renderBoard();
+            }
+        }
+        
+        function openSettings() {
+            const selector = document.getElementById('categorySelector');
+            selector.innerHTML = '';
+            
+            Object.keys(allCategories).forEach(category => {
+                const option = document.createElement('div');
+                option.className = 'category-option';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `cat-${category}`;
+                checkbox.checked = gameState.selectedCategories.includes(category);
+                
+                const label = document.createElement('label');
+                label.htmlFor = `cat-${category}`;
+                label.textContent = category;
+                
+                option.appendChild(checkbox);
+                option.appendChild(label);
+                option.onclick = (e) => {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                };
+                
+                selector.appendChild(option);
+            });
+            
+            document.getElementById('settingsModal').style.display = 'block';
+        }
+        
+        function closeSettings() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+        
+        function applyCategories() {
+            const checkboxes = document.querySelectorAll('#categorySelector input[type="checkbox"]');
+            const selected = [];
+            
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    const category = cb.id.replace('cat-', '');
+                    selected.push(category);
+                }
+            });
+            
+            if (selected.length !== 5) {
+                alert('Please select exactly 5 categories.');
+                return;
+            }
+            
+            gameState.selectedCategories = selected;
+            localStorage.setItem('selectedCategories', JSON.stringify(selected));
+            localStorage.setItem('gameVersion', '2.0');
+            
+            // Reset game with new categories
+            gameState.team1Score = 0;
+            gameState.team2Score = 0;
+            gameState.usedCells.clear();
+            gameState.currentCell = null;
+            
+            document.getElementById('score1').textContent = '$0';
+            document.getElementById('score2').textContent = '$0';
+            
+            saveGameState();
+            renderBoard();
+            closeSettings();
+        }
+        
+        function saveGameState() {
+            localStorage.setItem('gameState', JSON.stringify({
+                team1Score: gameState.team1Score,
+                team2Score: gameState.team2Score,
+                usedCells: Array.from(gameState.usedCells)
+            }));
+        }
+        
+        function loadGameState() {
+            const saved = localStorage.getItem('gameState');
+            if (saved) {
+                const state = JSON.parse(saved);
+                gameState.team1Score = state.team1Score;
+                gameState.team2Score = state.team2Score;
+                gameState.usedCells = new Set(state.usedCells);
+                
+                document.getElementById('score1').textContent = `$${gameState.team1Score}`;
+                document.getElementById('score2').textContent = `$${gameState.team2Score}`;
+            }
+        }
+        
+        // Initialize game: load content from Supabase first, then render
+        document.addEventListener('DOMContentLoaded', async function() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            const ok = await loadCategoriesFromSupabase();
+
+            if (!ok) {
+                loadingScreen.innerHTML = `
+                    <div class="load-error">
+                        Couldn't load categories from Supabase, and no offline copy was found.<br><br>
+                        Check your internet connection, or confirm the Supabase project has data
+                        (schema.sql + seed_data.sql have been run).
+                    </div>`;
+                return;
+            }
+
+            loadCategories();
+            loadGameState();
+            renderBoard();
+            updateJudgesList();
+            loadingScreen.style.display = 'none';
+        });
+        
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const promptModal = document.getElementById('promptModal');
+            const settingsModal = document.getElementById('settingsModal');
+            if (event.target === promptModal) {
+                closeModal();
+            } else if (event.target === settingsModal) {
+                closeSettings();
+            }
+        }
+    </script>
+</body>
+</html>
